@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>percolator.js</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <!-- Le styles -->
+    <link href="css/bootstrap.css" rel="stylesheet">
+    <style type="text/css">
+      body {
+        padding-top: 60px;
+        padding-bottom: 40px;
+      }
+
+      pre {outline: 1px solid #ccc; padding: 5px; margin: 5px; }
+      .string { color: green; }
+      .number { color: darkorange; }
+      .boolean { color: blue; }
+      .null { color: magenta; }
+      .key { color: black; }
+
+    </style>
+    <link href="css/bootstrap-responsive.css" rel="stylesheet">
+
+    <!-- Le HTML5 shim, for IE6-8 support of HTML5 elements -->
+    <!--[if lt IE 9]>
+      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+    <!-- Le fav and touch icons -->
+    <link rel="shortcut icon" href="ico/favicon.ico">
+    <link rel="apple-touch-icon-precomposed" sizes="144x144" href="ico/apple-touch-icon-144-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" sizes="114x114" href="ico/apple-touch-icon-114-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" sizes="72x72" href="ico/apple-touch-icon-72-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" href="ico/apple-touch-icon-57-precomposed.png">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+    <script src="js/superagent.js"></script>
+    <script>
+
+      function uriParse(uri){
+        var parsed = document.createElement('a');
+        // parsed has these properties:   protocol, hostname, port, pathname, search, hash, host
+        parsed.href = uri;
+        return parsed;
+      }
+
+      function qs(key) {
+        var re=new RegExp('(?:\\?|&)'+key+'=(.*?)(?=&|$)','gi');
+        var r=[], m;
+        while ((m=re.exec(document.location.search)) !== null){
+          r.push(unescape(m[1]));
+        }
+        return r;
+      }
+
+       function htmlEncode(str){
+         return str;
+         return str.replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;');
+       }
+
+       function linkify(_links){
+         console.log("links in: ", _links);
+         for(linkname in _links){
+           var v = _links[linkname];
+           v.href = "<a href='?href=" + escape(v.href) + "'>" + v.href + '</a>';
+         };
+         console.log('links out: ', _links);
+         return _links;
+       }
+
+       function traverse(obj,func) {
+         for (key in obj) {
+           var value = obj[key];
+           if (func.apply(this,[key,value])){
+             if (typeof(value)=="object") {
+               //going on step down in the object tree!!
+               traverse(value,func);
+             }
+           }
+         }
+       }
+
+       function render(obj){
+         traverse(obj, function(key, value){
+           console.log("called handler");
+           if (key === "_links"){
+             console.log("linkifying");
+             obj['_links'] = linkify(value);
+             return false;
+           } else {
+             if (typeof value === 'string'){
+               console.log("string: ", value);
+               obj[key] = htmlEncode(value);
+             }
+             return true;
+           }
+         });
+
+         console.log('pre-stringify: ', obj);
+
+         var json = JSON.stringify(obj, null, 4);
+         console.log('post-stringify: ', json);
+         //json = htmlEncode(json);
+         //console.log(json);
+         /*
+         json = json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+           var cls = 'number';
+           if (/^"/.test(match)) {
+              if (/:$/.test(match)) {
+                  cls = 'key';
+              } else {
+                  cls = 'string';
+              }
+           } else if (/true|false/.test(match)) {
+              cls = 'boolean';
+           } else if (/null/.test(match)) {
+              cls = 'null';
+           }
+           return '<span class="' + cls + '">' + match + '</span>';
+         });
+         */
+         console.log(json);
+         return json;
+       }
+
+       function retrieveUrl(url){
+          superagent
+            .get(url)
+            .set('Accept', 'application/json')
+            .end(function(res){
+
+              $('#loaded').html(render(res.body));
+            });
+       }
+
+       $(function(){
+         var url = qs('href')[0] || '/';
+         console.log("url : ", url);
+
+         $('#urlField').val(url);
+         retrieveUrl(url);
+
+         $('#goBtn').click(function(btn){
+          var url = $('#urlField').val();
+          retrieveUrl(url);
+         });
+       
+       });
+    </script>
+  </head>
+
+  <body>
+
+    <div class="navbar navbar-fixed-top">
+      <div class="navbar-inner">
+        <div class="container">
+          <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </a>
+          <a class="brand" href="/"><img src="img/headr-nav.png" /></a>
+          <div class="nav-collapse collapse">
+            <ul class="nav">
+              <li class="active"><a href="/util/">Home</a></li>
+            </ul>
+          </div><!--/.nav-collapse -->
+        </div>
+      </div>
+    </div>
+
+    <div class="container">
+      <p>Location: <form>
+        <input type="text" name="url" id="urlField" value="/" />
+        <input type="button" id="goBtn" value="GO" />
+      </form></p>
+      <pre>
+      <div id="loaded"></div>
+      </pre>
+    </div> <!-- /container -->
+
+    <!-- Le javascript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="js/bootstrap-transition.js"></script>
+    <script src="js/bootstrap-alert.js"></script>
+    <script src="js/bootstrap-modal.js"></script>
+    <script src="js/bootstrap-dropdown.js"></script>
+    <script src="js/bootstrap-scrollspy.js"></script>
+    <script src="js/bootstrap-tab.js"></script>
+    <script src="js/bootstrap-tooltip.js"></script>
+    <script src="js/bootstrap-popover.js"></script>
+    <script src="js/bootstrap-button.js"></script>
+    <script src="js/bootstrap-collapse.js"></script>
+    <script src="js/bootstrap-carousel.js"></script>
+    <script src="js/bootstrap-typeahead.js"></script>
+    <script src="js/bootstrap-affix.js"></script>
+  </body>
+</html>
+
