@@ -133,11 +133,32 @@
          return json;
        }
 
+       function headersToHtml(headers){
+         var html = '';
+         for(var k in headers){
+           v = headers[k];
+           html += '<dl class="dl-horizontal"><dt>' + k + '</dt><dd>' + v + '</dd></dl>';
+         }
+         return html;
+       }
+
+       function statusToHtml(status){
+         var type = '';
+         switch(true){
+           case (status >= 200 && status < 300) : type = 'badge-success'; break;
+           case (status >= 300 && status < 400) : type = 'badge-info'; break;
+           case (status >= 400) : type = 'badge-important'; break;
+         }
+         return '<span class="badge ' + type + '">' + status + '</span>';
+       }
+
        function retrieveUrl(url){
           superagent
             .get(url)
             .set('Accept', 'application/json')
             .end(function(res){
+              $('#responseStatus').html(statusToHtml(res.status));
+              $('#responseHeaders').html(headersToHtml(res.header));
 
               $('#loaded').html(render(res.body));
 
@@ -199,9 +220,26 @@
         <input type="text" name="url" id="urlField" value="/" />
         <input type="button" id="goBtn" value="GO" />
       </form></p>
+      <div class="row">
+        <div class="span1">
+          <h4>Status: </h4>
+        </div>
+        <div class="span1">
+          <div id="responseStatus"></div>
+        </div>
+      </div>
+      <h4>Body:</h4>
       <pre>
       <div id="loaded"></div>
       </pre>
+      <div class="row">
+        <div class="span12">
+          <h4>Headers:</h4>
+        </div>
+        <div class="span12">
+          <div id="responseHeaders"></div>
+        </div>
+      </div>
     </div> <!-- /container -->
 
     <!-- Le javascript
