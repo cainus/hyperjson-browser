@@ -67,7 +67,11 @@
          console.log("links in: ", _links);
          for(linkname in _links){
            var v = _links[linkname];
-           v.href = "<a href='?href=" + escape(v.href) + "'>" + v.href + '</a>';
+           if (!!v.method && (v.method === "DELETE")){
+             v.href = "<a class='deleteLink' href='#'>" + v.href + '</a>';
+           } else {
+             v.href = "<a href='?href=" + escape(v.href) + "'>" + v.href + '</a>';
+           }
          };
          console.log('links out: ', _links);
          return _links;
@@ -124,6 +128,7 @@
            return '<span class="' + cls + '">' + match + '</span>';
          });
          */
+
          console.log(json);
          return json;
        }
@@ -135,6 +140,20 @@
             .end(function(res){
 
               $('#loaded').html(render(res.body));
+
+              $('.deleteLink').click(function(ev){
+                console.log("deletelink clicked");
+                console.log(ev);
+                var delUrl = ev.currentTarget.innerText;
+                if (confirm("Really delete " + delUrl + "?")){
+                  console.log("deleting: ", delUrl);
+                  superagent.del(delUrl).end(function(res){
+                    console.log("response: ", res);
+                    alert('status: ' + res.status + "\nbody: " + res.body);
+                  });
+                }
+
+              });
             });
        }
 
@@ -144,6 +163,7 @@
 
          $('#urlField').val(url);
          retrieveUrl(url);
+
 
          $('#goBtn').click(function(btn){
           var url = $('#urlField').val();
@@ -167,7 +187,7 @@
           <a class="brand" href="/"><img src="img/headr-nav.png" /></a>
           <div class="nav-collapse collapse">
             <ul class="nav">
-              <li class="active"><a href="/util/">Home</a></li>
+              <li class="active"><a href="/api/_util/?href=%2Fapi%2F">Home</a></li>
             </ul>
           </div><!--/.nav-collapse -->
         </div>
