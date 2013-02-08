@@ -64,6 +64,15 @@
                     .replace(/>/g, '&gt;');
        }
 
+       function relativeLink(href){
+         var parsed = uriParse(href);
+         var hostIndex = href.indexOf(parsed.host);
+         if (hostIndex != -1){
+           return href.slice(hostIndex + parsed.host.length);
+         }
+         return href;
+       }
+
        function linkify(_links){
          console.log("links in: ", _links);
          for(linkname in _links){
@@ -71,7 +80,7 @@
            if (!!v.method && (v.method === "DELETE")){
              v.href = "<a class='deleteLink' href='#'>" + v.href + '</a>';
            } else {
-             v.href = "<a href='?href=" + escape(v.href) + "'>" + v.href + '</a>';
+             v.href = "<a href='?href=" + escape(relativeLink(v.href)) + "'>" + v.href + '</a>';
            }
            if (v.method){
              v.method = '<strong>' + v.method + '</strong>';
