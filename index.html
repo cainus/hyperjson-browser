@@ -38,6 +38,7 @@
     <link rel="apple-touch-icon-precomposed" href="ico/apple-touch-icon-57-precomposed.png">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
     <script src="js/superagent.js"></script>
+    <script src="js/bootbox.min.js"></script>
     <script>
 
       function uriParse(uri){
@@ -72,6 +73,9 @@
            } else {
              v.href = "<a href='?href=" + escape(v.href) + "'>" + v.href + '</a>';
            }
+           if (v.method){
+             v.method = '<strong>' + v.method + '</strong>';
+           }
          };
          console.log('links out: ', _links);
          return _links;
@@ -94,7 +98,8 @@
            console.log("called handler");
            if (key === "_links"){
              console.log("linkifying");
-             obj['_links'] = linkify(value);
+             obj['<strong>_links</strong>'] = linkify(value);
+             delete obj._links;
              return false;
            } else {
              if (typeof value === 'string'){
@@ -166,14 +171,15 @@
                 console.log("deletelink clicked");
                 console.log(ev);
                 var delUrl = ev.currentTarget.innerText;
-                if (confirm("Really delete " + delUrl + "?")){
-                  console.log("deleting: ", delUrl);
-                  superagent.del(delUrl).end(function(res){
-                    console.log("response: ", res);
-                    alert('status: ' + res.status + "\nbody: " + res.body);
-                  });
-                }
-
+                var confirmMsg = "Really delete " + delUrl + "?";
+                bootbox.confirm(confirmMsg, function(shouldDoIt){
+                  if (shouldDoIt){
+                    superagent.del(delUrl).end(function(res){
+                      console.log("response: ", res);
+                      alert('status: ' + res.status + "\nbody: " + res.body);
+                    });
+                  }
+                });
               });
             });
        }
