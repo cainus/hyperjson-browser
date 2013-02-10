@@ -39,6 +39,7 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
     <script src="js/superagent.js"></script>
     <script src="js/bootbox.min.js"></script>
+    <script src="js/underscore-min.js"></script>
     <script>
 
       function uriParse(uri){
@@ -91,19 +92,17 @@
        }
 
        function traverse(obj,func) {
-         for (key in obj) {
-           var value = obj[key];
-           if (func.apply(this,[key,value])){
-             if (typeof(value)=="object") {
+         _.each(obj, function(v, k){
+           if (func(k,v,obj)){
+             if (typeof(v)=="object") {
                //going on step down in the object tree!!
-               traverse(value,func);
+               traverse(v,func);
              }
            }
-         }
+         });
        }
 
-       function render(obj){
-         traverse(obj, function(key, value){
+       function formatKeyValue(key, value, obj){
            console.log("called handler");
            if (key === "_links"){
              console.log("linkifying");
@@ -117,33 +116,14 @@
              }
              return true;
            }
-         });
+       }
 
+       function render(obj){
+         traverse(obj, formatKeyValue);
          console.log('pre-stringify: ', obj);
 
          var json = JSON.stringify(obj, null, 4);
          console.log('post-stringify: ', json);
-         //json = htmlEncode(json);
-         //console.log(json);
-         /*
-         json = json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
-           var cls = 'number';
-           if (/^"/.test(match)) {
-              if (/:$/.test(match)) {
-                  cls = 'key';
-              } else {
-                  cls = 'string';
-              }
-           } else if (/true|false/.test(match)) {
-              cls = 'boolean';
-           } else if (/null/.test(match)) {
-              cls = 'null';
-           }
-           return '<span class="' + cls + '">' + match + '</span>';
-         });
-         */
-
-         console.log(json);
          return json;
        }
 
@@ -174,12 +154,17 @@
               $('#responseStatus').html(statusToHtml(res.status));
               $('#responseHeaders').html(headersToHtml(res.header));
 
-              $('#loaded').html(render(res.body));
+              console.log("body ", typeof res.body, res.body);
+              console.log("text ", typeof res.text, res.text);
+              var body = res.body;
+              body = JSON.parse(res.text);
+              console.log("cleaned ", typeof body , body);
+              console.log("cleaned string", typeof body , JSON.stringify(body));
+
+              $('#loaded').html(render(body));
 
               $('.deleteLink').click(function(ev){
-                console.log("deletelink clicked");
-                console.log(ev);
-                var delUrl = ev.currentTarget.innerText;
+                var delUrl = $(ev.currentTarget).text();
                 var confirmMsg = "Really delete " + delUrl + "?";
                 bootbox.confirm(confirmMsg, function(shouldDoIt){
                   if (shouldDoIt){
