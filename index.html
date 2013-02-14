@@ -78,8 +78,13 @@
          console.log("links in: ", _links);
          for(linkname in _links){
            var v = _links[linkname];
-           if (!!v.method && (v.method === "DELETE")){
-             v.href = "<a class='deleteLink' href='#'>" + v.href + '</a>';
+           if (!!v.method){
+             if (v.method === "DELETE"){
+               v.href = "<a class='deleteLink' href='#'>" + v.href + '</a>';
+             }
+             if (v.method === "PUT"){
+               v.href = "<a class='putLink' href='#'>" + v.href + '</a>';
+             }
            } else {
              v.href = "<a href='?href=" + escape(relativeLink(v.href)) + "'>" + v.href + '</a>';
            }
@@ -146,6 +151,27 @@
          return '<span class="badge ' + type + '">' + status + '</span>';
        }
 
+       function getInputForm(method, url, schema){
+         var retval = "url " + url + " .";
+         var urlParams = url.match(/{([^}]+)}/g);
+         retval += '<form>';
+         if (urlParams.length > 0){
+           retval += '<fieldset>';
+           retval += '<legend>URL Parameters</legend>';
+           _.each(urlParams, function(param){
+             retval += '<label>';
+             retval += param.slice(1, -1);
+             retval += ': <input type="text" name="" value="" /></label>';
+           });
+           retval += '</fieldset>';
+         }
+         retval += '<fieldset>';
+         retval += '<legend>Body</legend>';
+         retval += '<textarea class="body"></textarea>';
+         retval += '</form>';
+         return retval;
+       }
+
        function retrieveUrl(url){
           superagent
             .get(url)
@@ -163,6 +189,49 @@
 
               $('#loaded').html(render(body));
 
+              $('.putLink').click(function(ev){
+                var delUrl = $(ev.currentTarget).text();
+                var schema = {};  // TODO get the real schema
+                var form = getInputForm('PUT', delUrl, schema);
+                var submit = function(form){
+                  console.log(form);
+                    //superagent.put(delUrl).end(function(res){
+                    //  console.log("response: ", res);
+                    //  alert('status: ' + res.status + "\nbody: " + res.body);
+                    //});
+                };
+                bootbox.dialog(form,
+                              [
+                                {
+                                label : "OK",
+                                 callback : function(){
+                                   submit();
+                                 }
+                                },
+                                {
+                                 label : "CANCEL",
+                                 callback : function(){
+                                   return null;
+                                 }
+                               }
+                                ],
+                                {
+                                  // prompts need a few extra options
+                                  "header"  : "PUT ",
+                                  // explicitly tell dialog NOT to show the dialog...
+                                  //???  "show"    : false,
+                                  "onEscape": function(){return null}
+                                }
+                                );
+                /*, function(shouldDoIt){
+                  if (shouldDoIt){
+                    superagent.put(delUrl).end(function(res){
+                      console.log("response: ", res);
+                      alert('status: ' + res.status + "\nbody: " + res.body);
+                    });
+                  }
+                });*/
+              });
               $('.deleteLink').click(function(ev){
                 var delUrl = $(ev.currentTarget).text();
                 var confirmMsg = "Really delete " + delUrl + "?";
