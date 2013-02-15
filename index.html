@@ -40,6 +40,7 @@
     <script src="js/superagent.js"></script>
     <script src="js/bootbox.min.js"></script>
     <script src="js/underscore-min.js"></script>
+    <script src="js/uri-template.js"></script>
     <script>
 
       function uriParse(uri){
@@ -151,24 +152,37 @@
          return '<span class="badge ' + type + '">' + status + '</span>';
        }
 
+       var uriParamNames = [];
+
        function getInputForm(method, url, schema){
          var retval = "url " + url + " .";
          var urlParams = url.match(/{([^}]+)}/g);
-         retval += '<form>';
+         uriParamNames = [];
+         retval += '<form class="inputForm">';
          if (urlParams.length > 0){
            retval += '<fieldset>';
            retval += '<legend>URL Parameters</legend>';
            _.each(urlParams, function(param){
+             var name = param.slice(1, -1);
+             uriParamNames.push(name)
              retval += '<label>';
-             retval += param.slice(1, -1);
-             retval += ': <input type="text" name="" value="" /></label>';
+             retval += name + ': <input type="text" name="URI_PARAM_';
+             retval += name + '" value="" />';
+             retval += '</label>';
            });
            retval += '</fieldset>';
          }
          retval += '<fieldset>';
          retval += '<legend>Body</legend>';
-         retval += '<textarea class="body"></textarea>';
+         retval += '<textarea name="body"></textarea>';
          retval += '</form>';
+         return retval;
+       }
+
+       function getUriParamFormField(name){
+         //console.log("checking: ", name);
+         var retval = $("form.inputForm input[name=URI_PARAM_" + name + "]").val()
+         //console.log("returning: ", retval);
          return retval;
        }
 
@@ -192,20 +206,31 @@
               $('.putLink').click(function(ev){
                 var delUrl = $(ev.currentTarget).text();
                 var schema = {};  // TODO get the real schema
-                var form = getInputForm('PUT', delUrl, schema);
+                var form = $(getInputForm('PUT', delUrl, schema));
                 var submit = function(form){
+                  console.log(uriParamNames);
+                  var paramDict = {};
+                  _.each(uriParamNames, function(name){
+                    paramDict[name] = getUriParamFormField(name);
+                  });
+                  var submitUri = uriTemplate(delUrl)(paramDict);
                   console.log(form);
-                    //superagent.put(delUrl).end(function(res){
-                    //  console.log("response: ", res);
-                    //  alert('status: ' + res.status + "\nbody: " + res.body);
-                    //});
+                  var body = $("form.inputForm textarea[name=body]").val();
+                  console.log("body: ", body);
+                  superagent.put(submitUri)
+                    .send(body)
+                    .set('Content-Type', 'application/json')
+                    .end(function(res){
+                      console.log("response: ", res);
+                      alert('status: ' + res.status + "\nbody: " + res.body);
+                    });
                 };
                 bootbox.dialog(form,
                               [
                                 {
                                 label : "OK",
                                  callback : function(){
-                                   submit();
+                                   submit(form);
                                  }
                                 },
                                 {
