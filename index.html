@@ -210,9 +210,17 @@
                 var submit = function(form){
                   console.log(uriParamNames);
                   var paramDict = {};
+                  var error = false;
                   _.each(uriParamNames, function(name){
                     paramDict[name] = getUriParamFormField(name);
+                    if (paramDict[name] === ''){
+                      error = "You must complete all form fields.";
+                    }
                   });
+                  if (error){
+                    alert(error);
+                    return true;
+                  }
                   var submitUri = uriTemplate(delUrl)(paramDict);
                   console.log(form);
                   var body = $("form.inputForm textarea[name=body]").val();
