@@ -1,4 +1,4 @@
-percolator-browser
+HyperJson-browser
 ==================
 
-A browser for Percolator APIs
+A browser for HyperJson APIs
