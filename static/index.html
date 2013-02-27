@@ -281,7 +281,7 @@
        }
 
        $(function(){
-         var url = qs('href')[0] || '/';
+         var url = qs('href')[0] || '/$$API_PATH$$';
          console.log("url : ", url);
 
          $('#urlField').val(url);
@@ -311,7 +311,7 @@
           <div class="nav-collapse collapse">
             <ul class="nav">
               <li class="active"><a
-                href="/$$MOUNT_PATH$$?href=%2F$$API_PATH$$">Home</a></li>
+                href="/$$MOUNT_PATH$$/?href=%2F$$API_PATH$$">Home</a></li>
             </ul>
           </div><!--/.nav-collapse -->
         </div>
@@ -320,7 +320,7 @@
 
     <div class="container">
       <p>Location: <form>
-        <input type="text" name="url" id="urlField" value="/" />
+        <input type="text" name="url" id="urlField" value="/$$API_PATH$$" />
         <input type="button" id="goBtn" value="GO" />
       </form></p>
       <div class="row">
