@@ -22,13 +22,14 @@ function getIndex(mount_path, api_path, cb){
 }
 
 module.exports = function(mount_path, api_path){
+  mount_path = mount_path.replace(/^\//, '');
+  api_path = mount_path.replace(/^\//, '');
   return function(req, res, next){
     var pathname = url.parse(req.url).pathname;
-    current_path = pathname.replace(/^\//, ''); // remove leading slash
+    var current_path = pathname.replace(/^\//, ''); // remove leading slash
     current_path = current_path.replace(/\/$/, ''); // remove trailing slash
     console.log('current_path: ', current_path, "mount_path: ", mount_path);
     if (!startsWith(current_path, mount_path)){
-      console.log("miss. returning early");
       return next();
     }
     var subpath = current_path.substring(mount_path.length);
