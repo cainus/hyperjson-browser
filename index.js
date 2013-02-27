@@ -23,7 +23,7 @@ function getIndex(mount_path, api_path, cb){
 
 module.exports = function(mount_path, api_path){
   mount_path = mount_path.replace(/^\//, '');
-  api_path = mount_path.replace(/^\//, '');
+  api_path = api_path.replace(/^\//, '');
   return function(req, res, next){
     var pathname = url.parse(req.url).pathname;
     var current_path = pathname.replace(/^\//, ''); // remove leading slash
