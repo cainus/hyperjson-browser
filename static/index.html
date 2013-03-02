@@ -83,6 +83,9 @@
              if (v.method === "DELETE"){
                v.href = "<a class='deleteLink' href='#'>" + v.href + '</a>';
              }
+             if (v.method === "POST"){
+               v.href = "<a class='postLink' href='#'>" + v.href + '</a>';
+             }
              if (v.method === "PUT"){
                v.href = "<a class='putLink' href='#'>" + v.href + '</a>';
              }
@@ -159,7 +162,7 @@
          var urlParams = url.match(/{([^}]+)}/g);
          uriParamNames = [];
          retval += '<form class="inputForm">';
-         if (urlParams.length > 0){
+         if (urlParams && (urlParams.length > 0)){
            retval += '<fieldset>';
            retval += '<legend>URL Parameters</legend>';
            _.each(urlParams, function(param){
@@ -203,10 +206,11 @@
 
               $('#loaded').html(render(body));
 
-              $('.putLink').click(function(ev){
+              var getWriteLinkHandler = function(httpMethod){
+              var writeLinkHandler = function(ev){
                 var delUrl = $(ev.currentTarget).text();
                 var schema = {};  // TODO get the real schema
-                var form = $(getInputForm('PUT', delUrl, schema));
+                var form = $(getInputForm(httpMethod, delUrl, schema));
                 var submit = function(form){
                   console.log(uriParamNames);
                   var paramDict = {};
@@ -225,7 +229,7 @@
                   console.log(form);
                   var body = $("form.inputForm textarea[name=body]").val();
                   console.log("body: ", body);
-                  superagent.put(submitUri)
+                  superagent[httpMethod.toLowerCase()](submitUri)
                     .send(body)
                     .set('Content-Type', 'application/json')
                     .end(function(res){
@@ -250,7 +254,7 @@
                                 ],
                                 {
                                   // prompts need a few extra options
-                                  "header"  : "PUT ",
+                                  "header"  : httpMethod + " ",
                                   // explicitly tell dialog NOT to show the dialog...
                                   //???  "show"    : false,
                                   "onEscape": function(){return null}
@@ -264,7 +268,13 @@
                     });
                   }
                 });*/
-              });
+              
+              };
+              return writeLinkHandler;
+            }
+
+              $('.putLink').click(getWriteLinkHandler('PUT'));
+              $('.postLink').click(getWriteLinkHandler('POST'));
               $('.deleteLink').click(function(ev){
                 var delUrl = $(ev.currentTarget).text();
                 var confirmMsg = "Really delete " + delUrl + "?";
