@@ -2,7 +2,7 @@
       "name": "hyperjson-browser",
       "description" : "Browser for HyperJson APIs.  Works well with <a href='http://percolatorjs.com'>Percolator apps</a>",
       "keywords" : ["api", "rest", "http", "resource", "hypermedia", "hyperjson"], 
-      "version": "0.0.4",
+      "version": "0.0.5",
       "bugs": {
        "url": "https://github.com/cainus/hyperjson-browser/issues"
       },
