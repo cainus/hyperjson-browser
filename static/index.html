@@ -157,12 +157,34 @@
 
        var uriParamNames = [];
 
+       function getUrlParams(url){
+         return url.match(/{([^}]+)}/g) || [];
+       }
+
+       function populateIfPUT(method, url){
+         var urlParams = getUrlParams(url);
+         var hasUrlParams = (urlParams.length > 0);
+         if (method === 'PUT' && !hasUrlParams){
+          console.log("update mode");
+          superagent
+            .get(url)
+            .set('Accept', 'application/json')
+            .end(function(res){
+              console.log("got a res: ", res.status, res.body);
+              if (res.status === 200){
+                var body = $("form.inputForm textarea[name=body]").val(JSON.stringify(res.body));
+              }
+            });
+         }
+       }
+
        function getInputForm(method, url, schema){
          var retval = "url " + url + " .";
-         var urlParams = url.match(/{([^}]+)}/g);
+         var urlParams = getUrlParams(url);
          uriParamNames = [];
          retval += '<form class="inputForm">';
-         if (urlParams && (urlParams.length > 0)){
+         var hasUrlParams = (urlParams.length > 0);
+         if (hasUrlParams){
            retval += '<fieldset>';
            retval += '<legend>URL Parameters</legend>';
            _.each(urlParams, function(param){
@@ -211,6 +233,7 @@
                 var delUrl = $(ev.currentTarget).text();
                 var schema = {};  // TODO get the real schema
                 var form = $(getInputForm(httpMethod, delUrl, schema));
+                populateIfPUT(httpMethod, delUrl);
                 var submit = function(form){
                   console.log(uriParamNames);
                   var paramDict = {};
