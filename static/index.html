@@ -22,13 +22,6 @@
       .null { color: magenta; }
       .key { color: black; }
 
-      textarea{
-        white-space:pre-wrap;
-        width : 95%;
-        padding-right: 10px;
-        padding-left: 10px;
-      }
-
     </style>
     <link href="css/bootstrap-responsive.css" rel="stylesheet">
 
@@ -49,6 +42,71 @@
     <script src="js/underscore-min.js"></script>
     <script src="js/uri-template.js"></script>
     <script>
+
+      var statusCodes = {
+        "100": "Continue",
+        "101": "Switching Protocols",
+        "102": "Processing",
+        "200": "OK",
+        "201": "Created",
+        "202": "Accepted",
+        "203": "Non-Authoritative Information",
+        "204": "No Content",
+        "205": "Reset Content",
+        "206": "Partial Content",
+        "207": "Multi-Status",
+        "208": "Already Reported",
+        "226": "IM Used",
+        "300": "Multiple Choices",
+        "301": "Moved Permanently",
+        "302": "Found",
+        "303": "See Other",
+        "304": "Not Modified",
+        "305": "Use Proxy",
+        "306": "Reserved",
+        "307": "Temporary Redirect",
+        "308": "Permanent Redirect",
+        "400": "Bad Request",
+        "401": "Unauthorized",
+        "402": "Payment Required",
+        "403": "Forbidden",
+        "404": "Not Found",
+        "405": "Method Not Allowed",
+        "406": "Not Acceptable",
+        "407": "Proxy Authentication Required",
+        "408": "Request Timeout",
+        "409": "Conflict",
+        "410": "Gone",
+        "411": "Length Required",
+        "412": "Precondition Failed",
+        "413": "Request Entity Too Large",
+        "414": "Request-URI Too Long",
+        "415": "Unsupported Media Type",
+        "416": "Requested Range Not Satisfiable",
+        "417": "Expectation Failed",
+        "422": "Unprocessable Entity",
+        "423": "Locked",
+        "424": "Failed Dependency",
+        "425": "Unordered Collection",
+        "426": "Upgrade Required",
+        "427": "Unassigned",
+        "428": "Precondition Required",
+        "429": "Too Many Requests",
+        "430": "Unassigned",
+        "431": "Request Header Fields Too Large",
+        "500": "Internal Server Error",
+        "501": "Not Implemented",
+        "502": "Bad Gateway",
+        "503": "Service Unavailable",
+        "504": "Gateway Timeout",
+        "505": "HTTP Version Not Supported",
+        "506": "Variant Also Negotiates",
+        "507": "Insufficient Storage",
+        "508": "Loop Detected",
+        "509": "Bandwidth Limit Exceeded",
+        "510": "Not Extended",
+        "511": "Network Authentication Required"
+    };
 
       if (!console){
         console = { log : function(){} };
@@ -101,11 +159,15 @@
          return href;
        }
 
+      var hasUriTemplate = function(href){
+        return href.indexOf('{') !== -1;
+      }
+
        function linkify(_links){
          console.log("links in: ", _links);
          for(linkname in _links){
            var v = _links[linkname];
-           if (!!v.method){
+           if (!!v.method && v.method !== 'GET'){
              if (v.method === "DELETE"){
                v.href = "<a class='deleteLink' href='#'>" + v.href + '</a>';
              }
@@ -116,7 +178,11 @@
                v.href = "<a class='putLink' href='#'>" + v.href + '</a>';
              }
            } else {
-             v.href = "<a href='" + relink(v.href) + "'>" + v.href + '</a>';
+             if (hasUriTemplate(v.href)){
+               v.href = "<a class='getLink' href='#'>" + v.href + '</a>';
+             } else {
+               v.href = "<a href='" + relink(v.href) + "'>" + v.href + '</a>';
+             }
            }
            if (v.method){
              v.method = '<strong>' + v.method + '</strong>';
@@ -155,18 +221,11 @@
 
        function render(obj){
          traverse(obj, formatKeyValue);
-         console.log('pre-stringify: ', obj);
+         //console.log('pre-stringify: ', obj);
 
          var json = JSON.stringify(obj, null, 4);
-         console.log('post-stringify: ', json);
+         //console.log('post-stringify: ', json);
          return json;
-       }
-
-       function delinkifyJson(key, value){
-         if (key === '_links') {
-           return undefined;
-         }
-         return value;
        }
 
        function headersToHtml(headers){
@@ -185,39 +244,28 @@
            case (status >= 300 && status < 400) : type = 'badge-info'; break;
            case (status >= 400) : type = 'badge-important'; break;
          }
-         return '<span class="badge ' + type + '">' + status + '</span>';
+         var retval = '<span class="badge ' + 
+                      type + 
+                      '">' + 
+                      status + 
+                      '</span>: ';
+         if (statusCodes[status]){
+           retval += statusCodes[status];
+         } else {
+           retval += 'Unknown status code.';
+         }
+         console.log("retval: ", retval);
+         return retval;
        }
 
        var uriParamNames = [];
 
-       function getUrlParams(url){
-         return url.match(/{([^}]+)}/g) || [];
-       }
-
-       function populateIfPUT(method, url){
-         var urlParams = getUrlParams(url);
-         var hasUrlParams = (urlParams.length > 0);
-         if (method === 'PUT' && !hasUrlParams){
-          console.log("update mode");
-          superagent
-            .get(url)
-            .set('Accept', 'application/json')
-            .end(function(res){
-              console.log("got a res: ", res.status, res.body);
-              if (res.status === 200){
-                var body = $("form.inputForm textarea[name=body]").html(JSON.stringify(res.body, delinkifyJson, 4));
-              }
-            });
-         }
-       }
-
        function getInputForm(method, url, schema){
          var retval = "url " + url + " .";
-         var urlParams = getUrlParams(url);
+         var urlParams = url.match(/{([^}]+)}/g);
          uriParamNames = [];
          retval += '<form class="inputForm">';
-         var hasUrlParams = (urlParams.length > 0);
-         if (hasUrlParams){
+         if (urlParams && (urlParams.length > 0)){
            retval += '<fieldset>';
            retval += '<legend>URL Parameters</legend>';
            _.each(urlParams, function(param){
@@ -231,8 +279,10 @@
            retval += '</fieldset>';
          }
          retval += '<fieldset>';
-         retval += '<legend>Body</legend>';
-         retval += '<textarea rows="10" name="body"></textarea>';
+         if (method !== "GET"){
+           retval += '<legend>Body</legend>';
+           retval += '<textarea name="body"></textarea>';
+         }
          retval += '</form>';
          return retval;
        }
@@ -244,29 +294,46 @@
          return retval;
        }
 
+       var handleResponse = function(res){
+         console.log("response: ", res);
+         // there's a res.header object
+         //alert('status: ' + res.status + "\nbody: " + res.body);
+         populateHtmlFromResponse(res);
+       }
+
+       var populateHtmlFromResponse = function(res){
+          $('#responseStatus').html(statusToHtml(res.status));
+          $('#responseHeaders').html(headersToHtml(res.header));
+          console.log("body ", typeof res.body, res.body);
+          console.log("text ", typeof res.text, res.text);
+          var body = res.body;
+          try {
+            body = JSON.parse(res.text);
+          } catch(ex){
+            body = '';
+          }
+          console.log("cleaned ", typeof body , body);
+          console.log("cleaned string", typeof body , JSON.stringify(body));
+
+          if (body != ""){
+            $('#loaded').html(render(body));
+          } else {
+            $('#loaded').html('');
+          }
+       }
+
        function retrieveUrl(url){
           superagent
             .get(url)
             .set('Accept', 'application/json')
             .end(function(res){
-              $('#responseStatus').html(statusToHtml(res.status));
-              $('#responseHeaders').html(headersToHtml(res.header));
-
-              console.log("body ", typeof res.body, res.body);
-              console.log("text ", typeof res.text, res.text);
-              var body = res.body;
-              body = JSON.parse(res.text);
-              console.log("cleaned ", typeof body , body);
-              console.log("cleaned string", typeof body , JSON.stringify(body));
-
-              $('#loaded').html(render(body));
+              populateHtmlFromResponse(res);
 
               var getWriteLinkHandler = function(httpMethod){
               var writeLinkHandler = function(ev){
                 var delUrl = $(ev.currentTarget).text();
                 var schema = {};  // TODO get the real schema
                 var form = $(getInputForm(httpMethod, delUrl, schema));
-                populateIfPUT(httpMethod, delUrl);
                 var submit = function(form){
                   console.log(uriParamNames);
                   var paramDict = {};
@@ -289,8 +356,7 @@
                     .send(body)
                     .set('Content-Type', 'application/json')
                     .end(function(res){
-                      console.log("response: ", res);
-                      alert('status: ' + res.status + "\nbody: " + res.body);
+                      handleResponse(res);
                     });
                 };
                 bootbox.dialog(form,
@@ -330,6 +396,7 @@
             }
 
               $('.putLink').click(getWriteLinkHandler('PUT'));
+              $('.getLink').click(getWriteLinkHandler('GET'));
               $('.postLink').click(getWriteLinkHandler('POST'));
               $('.deleteLink').click(function(ev){
                 var delUrl = $(ev.currentTarget).text();
@@ -337,8 +404,9 @@
                 bootbox.confirm(confirmMsg, function(shouldDoIt){
                   if (shouldDoIt){
                     superagent.del(delUrl).end(function(res){
-                      console.log("response: ", res);
-                      alert('status: ' + res.status + "\nbody: " + res.body);
+                      //console.log("response: ", res);
+                      //alert('status: ' + res.status + "\nbody: " + res.body);
+                      populateHtmlFromResponse(res);
                     });
                   }
                 });
