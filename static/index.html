@@ -50,6 +50,10 @@
     <script src="js/uri-template.js"></script>
     <script>
 
+      if (!console){
+        console = { log : function(){} };
+      }
+
       function uriParse(uri){
         var parsed = document.createElement('a');
         // parsed has these properties:   protocol, hostname, port, pathname, search, hash, host
@@ -73,12 +77,27 @@
                     .replace(/>/g, '&gt;');
        }
 
-       function relativeLink(href){
+       function relink(href){
+         // create a link that goes through /browser again,
+         // unless it's to another domain.
+         console.log("href: ", href);
          var parsed = uriParse(href);
+         console.log("Parsed: ", parsed);
+         console.log("host: ", parsed.host);
          var hostIndex = href.indexOf(parsed.host);
          if (hostIndex != -1){
-           return href.slice(hostIndex + parsed.host.length);
+           console.log("found");
+           var currentUriParsed = uriParse(window.location.href);
+           console.log(currentUriParsed.protocol);
+           console.log(currentUriParsed.host);
+           if (currentUriParsed.host !== parsed.host){
+             // it's another domain.  don't link through /browser.
+             return href;
+           }
+           href = href.slice(hostIndex + parsed.host.length);
          }
+         href = '?href=' + escape(href);
+         console.log("returning: ", href);
          return href;
        }
 
@@ -97,7 +116,7 @@
                v.href = "<a class='putLink' href='#'>" + v.href + '</a>';
              }
            } else {
-             v.href = "<a href='?href=" + escape(relativeLink(v.href)) + "'>" + v.href + '</a>';
+             v.href = "<a href='" + relink(v.href) + "'>" + v.href + '</a>';
            }
            if (v.method){
              v.method = '<strong>' + v.method + '</strong>';
