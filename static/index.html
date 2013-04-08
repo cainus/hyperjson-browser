@@ -280,8 +280,15 @@
          }
          retval += '<fieldset>';
          if (method !== "GET"){
+           retval += '<div class="row">'
+           retval += '<div class="span3">'
            retval += '<legend>Body</legend>';
            retval += '<textarea name="body"></textarea>';
+           retval += '</div>'
+           retval += '<div class="span1" id="jsonimg">'
+           retval += '<img src="img/badjson.png">';
+           retval += '</div>'
+           retval += '</div>'
          }
          retval += '</form>';
          return retval;
@@ -322,6 +329,19 @@
           }
        }
 
+       var onBodyFieldChange = function(ev){
+         //console.log(ev);
+         var current = $(ev.target).val();
+         try {
+           JSON.parse(current);
+           console.log("good");
+           $('#jsonimg').html('<img title="valid json" src="img/goodjson.png" />');
+         } catch(ex){
+           console.log("bad");
+           $('#jsonimg').html('<img  title="invalid json" src="img/badjson.png" />');
+         }
+       }
+
        function retrieveUrl(url){
           superagent
             .get(url)
@@ -350,7 +370,8 @@
                   }
                   var submitUri = uriTemplate(delUrl)(paramDict);
                   console.log(form);
-                  var body = $("form.inputForm textarea[name=body]").val();
+                  var bodyField = $("form.inputForm textarea[name=body]");
+                  var body = bodyField.val();
                   console.log("body: ", body);
                   superagent[httpMethod.toLowerCase()](submitUri)
                     .send(body)
@@ -382,6 +403,9 @@
                                   "onEscape": function(){return null}
                                 }
                                 );
+                var bodyField = $("form.inputForm textarea[name=body]");
+                bodyField.keyup(onBodyFieldChange);
+
                 /*, function(shouldDoIt){
                   if (shouldDoIt){
                     superagent.put(delUrl).end(function(res){
