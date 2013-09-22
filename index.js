@@ -4,7 +4,7 @@ var fs = require('fs');
 
 var index = null;
 
-function getIndex(mount_path, api_path, cb){
+function getIndex(mount_path, api_path, title, cb){
   console.log("getIndex");
   if (index){
     return cb(null, index);
@@ -17,11 +17,13 @@ function getIndex(mount_path, api_path, cb){
     }
     data = data.replace(/\$\$MOUNT_PATH\$\$/g, mount_path);
     data = data.replace(/\$\$API_PATH\$\$/g, api_path);
+    data = data.replace(/\$\$TITLE\$\$/g, title);
     return cb(null, data);
   });
 }
 
-module.exports = function(mount_path, api_path){
+module.exports = function(mount_path, api_path, title){
+  title = title || 'hyper+json browser';
   mount_path = mount_path.replace(/^\//, '');
   api_path = api_path.replace(/^\//, '');
   return function(req, res, next){
@@ -43,7 +45,7 @@ module.exports = function(mount_path, api_path){
         res.writeHead(301);
         return res.end();
       }
-      getIndex(mount_path, api_path, function(err, data){
+      getIndex(mount_path, api_path, title, function(err, data){
         if (err){
           return res.end(JSON.stringify(err));
         }

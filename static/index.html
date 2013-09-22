@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>percolator.js</title>
+    <title>$$TITLE$$</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="">
     <meta name="author" content="">
@@ -21,6 +21,17 @@
       .boolean { color: blue; }
       .null { color: magenta; }
       .key { color: black; }
+
+      .nav-tabs > li, .nav-pills > li {
+          float:right;
+          display:inline-block;
+          *display:inline; /* ie7 fix */
+           zoom:1; /* hasLayout ie7 trigger */
+      }
+
+      .nav-tabs, .nav-pills {
+          text-align:center;
+      }
 
     </style>
     <link href="css/bootstrap-responsive.css" rel="stylesheet">
@@ -244,16 +255,17 @@
            case (status >= 300 && status < 400) : type = 'badge-info'; break;
            case (status >= 400) : type = 'badge-important'; break;
          }
-         var retval = '<span class="badge ' + 
+         var retval = '<br /><br /><div class="row"><span class="badge ' + 
                       type + 
                       '">' + 
                       status + 
-                      '</span>: ';
+                      '</span> ';
          if (statusCodes[status]){
            retval += statusCodes[status];
          } else {
            retval += 'Unknown status code.';
          }
+         retval += '</div>';
          console.log("retval: ", retval);
          return retval;
        }
@@ -373,6 +385,10 @@
                   var bodyField = $("form.inputForm textarea[name=body]");
                   var body = bodyField.val();
                   console.log("body: ", body);
+                  if (httpMethod === "GET"){
+                    window.location.replace(relink(submitUri));
+                    return;
+                  }
                   superagent[httpMethod.toLowerCase()](submitUri)
                     .send(body)
                     .set('Content-Type', 'application/json')
@@ -439,17 +455,46 @@
        }
 
        $(function(){
+         $("#rawFrame").hide();
+
          var url = qs('href')[0] || '/$$API_PATH$$';
          console.log("url : ", url);
 
          $('#urlField').val(url);
          retrieveUrl(url);
 
-
-         $('#goBtn').click(function(btn){
-          var url = $('#urlField').val();
-          retrieveUrl(url);
+         $('#locationForm').submit(function(){
+            var url = $('#urlField').val();
+            window.location.replace(relink(url));
+            return false;
          });
+
+         $('#getBtn').click(function(btn){
+          var url = $('#urlField').val();
+          window.location.replace(relink(url));
+         });
+         $('#getNewTabBtn').click(function(btn){
+          var url = $('#urlField').val();
+          window.location.replace(url);
+         });
+
+         $("#renderedBtn").click(function () { 
+           $("#renderedFrame").show();
+           $("#rawFrame").hide();
+           $('#rawBtn').parent().removeClass('active');
+           $('#renderedBtn').parent().addClass('active');
+
+         });
+         $("#rawBtn").click(function () { 
+
+           $("#renderedFrame").hide();
+           $("#rawFrame").show()
+                         .attr("src", url)
+                         .attr("height", 300);
+           $('#rawBtn').parent().addClass('active');
+           $('#renderedBtn').parent().removeClass('active');
+         });
+
        
        });
     </script>
@@ -460,37 +505,41 @@
     <div class="navbar navbar-fixed-top">
       <div class="navbar-inner">
         <div class="container">
-          <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-          </a>
-          <a class="brand" href="/"><img src="img/headr-nav.png" /></a>
-          <div class="nav-collapse collapse">
+          <a class="brand" href="/">$$TITLE$$</a>
+          <div>
             <ul class="nav">
-              <li class="active"><a
-                href="/$$MOUNT_PATH$$/?href=%2F$$API_PATH$$">Home</a></li>
+              <li class="active"><a href="/$$MOUNT_PATH$$/?href=%2F$$API_PATH$$">Home</a></li>
             </ul>
-          </div><!--/.nav-collapse -->
+          </div>
         </div>
       </div>
     </div>
 
     <div class="container">
-      <p>Location: <form>
+      <p>Location: <form id="locationForm">
         <input type="text" name="url" id="urlField" value="/$$API_PATH$$" />
-        <input type="button" id="goBtn" value="GO" />
+        <input type="button" id="getBtn" value="rendered GET" />
+        <input type="button" id="getNewTabBtn" value="plain GET" />
       </form></p>
       <div class="row">
         <div class="span1">
           <h4>Status: </h4>
         </div>
-        <div class="span5">
+        <div class="span1">
           <div id="responseStatus"></div>
         </div>
       </div>
       <h4>Body:</h4>
-      <pre>
+      <div>
+        <ul class="nav nav-tabs">
+          <li class="active">
+            <a id="renderedBtn" href="#">Rendered</a>
+          </li>
+          <li><a id="rawBtn" href="#">Raw</a></li>
+        </ul>
+      </div>
+      <iframe id="rawFrame" src="" width="100%" height="0"></iframe>
+      <pre id="renderedFrame">
       <div id="loaded"></div>
       </pre>
       <div class="row">
