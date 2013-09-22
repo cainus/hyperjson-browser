@@ -457,7 +457,9 @@
        $(function(){
          $("#rawFrame").hide();
 
-         var url = qs('href')[0] || '/$$API_PATH$$';
+         var url = window.location.protocol + '//' +
+                   window.location.host +  
+                   (qs('href')[0] || '/$$API_PATH$$');
          console.log("url : ", url);
 
          $('#urlField').val(url);
