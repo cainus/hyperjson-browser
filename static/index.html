@@ -33,6 +33,10 @@
           text-align:center;
       }
 
+      #urlField {
+        width : 100%
+      }
+
     </style>
     <link href="css/bootstrap-responsive.css" rel="stylesheet">
 
@@ -518,8 +522,10 @@
     </div>
 
     <div class="container">
-      <p>Location: <form id="locationForm">
+      <p>Location: 
+      <form id="locationForm">
         <input type="text" name="url" id="urlField" value="/$$API_PATH$$" />
+        <br />
         <input type="button" id="getBtn" value="rendered GET" />
         <input type="button" id="getNewTabBtn" value="plain GET" />
       </form></p>

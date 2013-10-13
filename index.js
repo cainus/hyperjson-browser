@@ -1,16 +1,18 @@
 var url = require('url');
 var filed = require('filed');
 var fs = require('fs');
+var logDriver = require('log-driver');
+var logger = logDriver({ level : false });
 
 var index = null;
 
 function getIndex(mount_path, api_path, title, cb){
-  console.log("getIndex");
+  logger.info("getIndex");
   if (index){
     return cb(null, index);
   }
   var indexPath = __dirname + '/./static/index.html';
-  console.log("indexPath: ", indexPath);
+  logger.info("indexPath: ", indexPath);
   fs.readFile(indexPath, 'utf-8', function (err, data) {
     if (err) {
       return cb(err);
@@ -22,20 +24,24 @@ function getIndex(mount_path, api_path, title, cb){
   });
 }
 
-module.exports = function(mount_path, api_path, title){
-  title = title || 'hyper+json browser';
-  mount_path = mount_path.replace(/^\//, '');
+module.exports = function(options){
+  options = options || {};
+  api_path = options.api_path || '/api';
+  browser_path = options.browser_path || api_path + '/browser';
+  title = options.title || 'hyper+json browser';
+  logger = logDriver( { level : (options.logLevel || false) });
+  mount_path = browser_path.replace(/^\//, '');
   api_path = api_path.replace(/^\//, '');
   return function(req, res, next){
     var pathname = url.parse(req.url).pathname;
     var current_path = pathname.replace(/^\//, ''); // remove leading slash
     current_path = current_path.replace(/\/$/, ''); // remove trailing slash
-    console.log('current_path: ', current_path, "mount_path: ", mount_path);
+    logger.info('current_path: ', current_path, "mount_path: ", mount_path);
     if (!startsWith(current_path, mount_path)){
       return next();
     }
     var subpath = current_path.substring(mount_path.length);
-    console.log("HIT sub path: ", subpath);
+    logger.info("HIT sub path: ", subpath);
     if (!subpath || subpath === ''){
       // this is an index request
       if (!endsWith(pathname, '/')){
