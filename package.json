@@ -1,6 +1,6 @@
 {
   "name": "hyperjson-browser",
-  "description": "Browser for HyperJson APIs.  Works well with <a href='http://percolatorjs.com'>Percolator apps</a>",
+  "description": "A browser for Hyper+json APIs.  Works well with <a href='http://percolatorjs.com'>Percolator apps</a>",
   "keywords": [
     "api",
     "rest",
@@ -9,7 +9,7 @@
     "hypermedia",
     "hyperjson"
   ],
-  "version": "0.1.1",
+  "version": "0.2.0",
   "bugs": {
     "url": "https://github.com/cainus/hyperjson-browser/issues"
   },
@@ -35,8 +35,12 @@
   "engine": {
     "node": ">=0.8.6"
   },
-  "readme": "HyperJson-browser\n==================\n\nA browser for HyperJson APIs\n",
+  "readme": "A browser for Hyper+Json APIs",
   "readmeFilename": "README.md",
-  "_id": "hyperjson-browser@0.0.7",
-  "_from": "hyperjson-browser@0.0.7"
+  "_id": "hyperjson-browser@0.1.1",
+  "_from": "hyperjson-browser@0.1.1",
+  "dist": {
+    "shasum": "d628513eb8e65d296380933331a3e76a8fb36dce"
+  },
+  "_resolved": "https://registry.npmjs.org/hyperjson-browser/-/hyperjson-browser-0.1.1.tgz"
 }

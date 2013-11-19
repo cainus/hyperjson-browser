@@ -51,11 +51,23 @@
     <link rel="apple-touch-icon-precomposed" sizes="114x114" href="ico/apple-touch-icon-114-precomposed.png">
     <link rel="apple-touch-icon-precomposed" sizes="72x72" href="ico/apple-touch-icon-72-precomposed.png">
     <link rel="apple-touch-icon-precomposed" href="ico/apple-touch-icon-57-precomposed.png">
+
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
     <script src="js/superagent.js"></script>
     <script src="js/bootbox.min.js"></script>
     <script src="js/underscore-min.js"></script>
     <script src="js/uri-template.js"></script>
+    <script src="js/ICanHaz.min.js"></script>
+    <script src="js/uriUtil.js"></script>
+    <script src="js/urlgrey.js"></script>
+
+    <!--
+    <script type="text/javascript" src="deps/jquery.min.js"></script>
+    <script type="text/javascript" src="deps/underscore.js"></script>
+    -->
+    <script type="text/javascript" src="jsonform/deps/opt/jsv.js"></script>
+    <script type="text/javascript" src="jsonform/lib/jsonform.js"></script>
+
     <script>
 
       var statusCodes = {
@@ -127,20 +139,12 @@
         console = { log : function(){} };
       }
 
-      function uriParse(uri){
-        var parsed = document.createElement('a');
-        // parsed has these properties:   protocol, hostname, port, pathname, search, hash, host
-        parsed.href = uri;
-        return parsed;
-      }
 
-      function qs(key) {
-        var re=new RegExp('(?:\\?|&)'+key+'=(.*?)(?=&|$)','gi');
-        var r=[], m;
-        while ((m=re.exec(document.location.search)) !== null){
-          r.push(unescape(m[1]));
-        }
-        return r;
+      function stripslashes(str) {
+        console.log("in: ", str);
+        str = str.replace(/\\'/g,'\'').replace(/\\"/g,'"').replace(/\\\\/g,'\\').replace(/\\0/g,'\0');
+        console.log("out: ", str);
+        return str;
       }
 
        function htmlEncode(str){
@@ -154,29 +158,37 @@
          // create a link that goes through /browser again,
          // unless it's to another domain.
          console.log("href: ", href);
-         var parsed = uriParse(href);
-         console.log("Parsed: ", parsed);
-         console.log("host: ", parsed.host);
-         var hostIndex = href.indexOf(parsed.host);
+         var parsed = urlgrey(href);
+         console.log("Parsed: ", parsed.toString());
+         console.log("host: ", parsed.hostname());
+         var hostIndex = href.indexOf(parsed.hostname());
          if (hostIndex != -1){
            console.log("found");
-           var currentUriParsed = uriParse(window.location.href);
-           console.log(currentUriParsed.protocol);
-           console.log(currentUriParsed.host);
-           if (currentUriParsed.host !== parsed.host){
+           var currentUriParsed = urlgrey();
+           console.log(currentUriParsed.protocol());
+           console.log(currentUriParsed.hostname());
+           if (currentUriParsed.hostname() !== parsed.hostname()){
              // it's another domain.  don't link through /browser.
              return href;
            }
-           href = href.slice(hostIndex + parsed.host.length);
+           href = relative(parsed.toString());
          }
-         href = '?href=' + escape(href);
+         //href = '?href=' + escape(href);
+         console.log("pre returning: ", href);
+         href = urlgrey().query({'href' : href}).toString();
          console.log("returning: ", href);
          return href;
        }
 
-      var hasUriTemplate = function(href){
-        return href.indexOf('{') !== -1;
-      }
+       function relative(url){
+         console.log("relative in: ", url);
+         var ug = urlgrey(url)
+         var href = ug.path();
+         href += ug.queryString() ? '?' + ug.queryString() : '';
+         href += ug.hash() ? '#' + ug.hash() : '';
+         console.log("relative out: ", href);
+         return href;
+       }
 
        function linkify(_links){
          console.log("links in: ", _links);
@@ -189,6 +201,8 @@
              if (v.method === "POST" || v.method === "PUT"){
                //console.log("type: ", v.type);
                var typeData = "data-type='" + (v.type || 'application/json') + "'";
+               console.log("storing: ", v.schema);
+               var typeData = "data-schema='" + JSON.stringify(v.schema || {}) + "'";
                //console.log("typeData: ", v.typeData);
                if (v.method === "POST"){
                  v.href = "<a class='postLink' " + typeData + " href='#'>" + v.href + '</a>';
@@ -283,39 +297,53 @@
 
        function getInputForm(method, url, schema){
          var retval = "url " + url + " .";
-         var urlParams = url.match(/{([^}]+)}/g);
-         uriParamNames = [];
-         retval += '<form class="inputForm">';
-         if (urlParams && (urlParams.length > 0)){
-           retval += '<fieldset>';
-           retval += '<legend>URL Parameters</legend>';
-           _.each(urlParams, function(param){
-             var name = param.slice(1, -1);
-             uriParamNames.push(name)
-             retval += '<label>';
-             retval += name + ': <input type="text" name="URI_PARAM_';
-             retval += name + '" value="" />';
-             retval += '</label>';
-           });
-           retval += '</fieldset>';
+
+         uriParamNames = getUriParamNames(url);
+         uriParamNames = uriParamNames.map(function(name){
+            return {name : name};
+         });
+
+         form = ich.inputFormTemplate({
+            method_needs_body : !!schema,
+            has_url_params : !!uriParamNames.length,
+            url_params : uriParamNames,
+         });
+
+         if (!!schema){
+           $(form).find('#input-json-form').jsonForm({
+              schema: prepareSchemaForJsonForm(schema),
+              onSubmit: function (errors, values) {
+                console.log("args!!! ", arguments);
+                if (errors){
+                  alert("There were errors in your form submission.");
+                } else {
+                  var theForm = $(form).find('#input-json-form');
+                  var sendInfo = theForm.get(0).HyperJsonBrowserSubmitInfo;
+                  console.log("no errors");
+                  console.log("theForm: ", theForm);
+                  console.log("sendInfo: ", sendInfo);
+                  if (sendInfo){
+                    console.log("ohhh yeah: ", sendInfo);
+                    sendBody(sendInfo.method, sendInfo.uri, JSON.stringify(values), sendInfo.contentType, sendInfo.done);
+                  }
+                  console.log("submitted!");
+                }
+              },
+              "form": [
+                "*"
+              ]
+            });
+            console.log("@#$%@#$%@#$%", $('input#inputFormSubmit').val());
+            $(form).find('#inputFormSubmit').click(function(){
+              console.log("submitting");
+            });
+            $(form).find('#inputFormSubmit').remove();
          }
-         retval += '<fieldset>';
-         if (method !== "GET"){
-           retval += '<div class="row">'
-           retval += '<div class="span3">'
-           retval += '<legend>Body</legend>';
-           retval += '<textarea name="body"></textarea>';
-           retval += '</div>'
-           retval += '<div class="span1" id="jsonimg">'
-           retval += '<img src="img/badjson.png">';
-           retval += '</div>'
-           retval += '</div>'
-         }
-         retval += '</form>';
-         return retval;
+
+         return form;
        }
 
-       function getUriParamFormField(name){
+       function getUriParamFormFieldValue(name){
          //console.log("checking: ", name);
          var retval = $("form.inputForm input[name=URI_PARAM_" + name + "]").val()
          //console.log("returning: ", retval);
@@ -350,8 +378,19 @@
           }
        }
 
+       var prepareSchemaForJsonForm = function(schema){
+         formSchema = {};
+         _.each(schema.properties, function(v, k){
+           formSchema[k] = v;
+           if (!v.title){
+             formSchema[k].title = k;
+           }
+         });
+         return formSchema;
+       }
+
        var onBodyFieldChange = function(ev){
-         //console.log(ev);
+         console.log("oBFC: ", ev);
          var current = $(ev.target).val();
          try {
            JSON.parse(current);
@@ -361,7 +400,130 @@
            console.log("bad");
            $('#jsonimg').html('<img  title="invalid json" src="img/badjson.png" />');
          }
-       }
+       };
+
+      var getFormSubmissionHandler = function(uriParamNames, url, httpMethod, contentType, cb){
+        console.log("formSubmissionhandler created with: ", arguments);
+        var submit = function(form){
+          /* TODO: make this work for jsonform form as well!!  */
+          console.log(uriParamNames);
+          var paramDict = {};
+          var error = false;
+          _.each(uriParamNames, function(obj){
+            paramDict[obj.name] = getUriParamFormFieldValue(obj.name);
+            if (paramDict[obj.name] === ''){
+              error = "You must complete all form fields.";
+              // TODO:  should we even have an error check?
+            }
+          });
+          if (error){
+            alert(error);
+            return true;
+          }
+          var submitUri = uriTemplate(url)(paramDict);
+          if (httpMethod === "GET"){
+            console.log("submitUri: ", submitUri);
+            var relinked = relink(submitUri);
+            console.log("relinked submitUri: ", relinked);
+            window.location.replace(relinked);
+            return;
+          }
+          console.log(form);
+          var body;
+          var jsonFormIsActive = $('#json-form-tab').parent().hasClass('active');
+          if (jsonFormIsActive){
+            console.log("form is active!!");
+            //$(form).find('#inputFormSubmit').click(function(){
+              console.log("submitting");
+              var theForm = $(form).find('#input-json-form')
+              console.log("theForm", theForm);
+              theForm.get(0).HyperJsonBrowserSubmitInfo = {
+                method : httpMethod,
+                uri : submitUri,
+                contentType : contentType,
+                done : cb
+              };
+              console.log("submitting theForm: ", theForm);
+              theForm.submit();
+            //});
+          } else {
+            console.log("form is NOT active!!");
+            var bodyField = $("form.inputForm textarea[name=body]");
+            body = bodyField.val();
+            sendBody(httpMethod, submitUri, body, contentType, cb);
+          }
+        };
+        return submit;
+      };
+
+      var sendBody = function(method, url, body, contentType, cb){
+          console.log("sendBody called with: ", arguments);
+          superagent[method.toLowerCase()](url)
+            .send(body)
+            .set('Content-Type', contentType)
+            .end(function(res){
+              cb(res);
+            });
+      };
+
+      var getWriteLinkHandler = function(httpMethod){
+        // this is used for PUT and POST, and GETs that have uri-templates
+        var writeLinkHandler = function(ev){
+          var urlTemplate = $(ev.currentTarget).text();
+          var contentType = $(ev.currentTarget).data('type') || 'application/json';
+          console.log("contentType: ", contentType);
+          var schema = $(ev.currentTarget).data('schema');
+          if (schema){
+            schema = stripslashes(schema);
+            try {
+              schema = JSON.parse(schema);
+            } catch (ex){
+              alert("schema parsing error: " + ex);
+              schema = {};
+            }
+          }
+          console.log("schema: ", schema);
+          var form = getInputForm(httpMethod, urlTemplate, schema);
+          console.log("FORM: ", form.html());
+          var submit = getFormSubmissionHandler(uriParamNames, urlTemplate, httpMethod, contentType, handleResponse);
+          bootbox.dialog(form,
+                        [
+                          {
+                          label : "OK",
+                           callback : function(){
+                             submit(form);
+                           }
+                          },
+                          {
+                           label : "CANCEL",
+                           callback : function(){
+                             return null;
+                           }
+                         }
+                          ],
+                          {
+                            // prompts need a few extra options
+                            "header"  : httpMethod + " ",
+                            // explicitly tell dialog NOT to show the dialog...
+                            //???  "show"    : false,
+                            "onEscape": function(){return null}
+                          }
+                          );
+          var bodyField = $("form.inputForm textarea[name=body]");
+          console.log("bodyField: ", bodyField);
+          bodyField.keyup(onBodyFieldChange);
+
+          /*, function(shouldDoIt){
+            if (shouldDoIt){
+              superagent.put(urlTemplate).end(function(res){
+                console.log("response: ", res);
+                alert('status: ' + res.status + "\nbody: " + res.body);
+              });
+            }
+          });*/
+        };
+        return writeLinkHandler;
+      }
 
        function retrieveUrl(url){
           superagent
@@ -369,83 +531,6 @@
             .set('Accept', 'application/json')
             .end(function(res){
               populateHtmlFromResponse(res);
-
-              var getWriteLinkHandler = function(httpMethod){
-              var writeLinkHandler = function(ev){
-                var delUrl = $(ev.currentTarget).text();
-                var contentType = $(ev.currentTarget).data('type') || 'application/json';
-                console.log("contentType: ", contentType);
-                var schema = {};  // TODO get the real schema
-                var form = $(getInputForm(httpMethod, delUrl, schema));
-                var submit = function(form){
-                  console.log(uriParamNames);
-                  var paramDict = {};
-                  var error = false;
-                  _.each(uriParamNames, function(name){
-                    paramDict[name] = getUriParamFormField(name);
-                    if (paramDict[name] === ''){
-                      error = "You must complete all form fields.";
-                    }
-                  });
-                  if (error){
-                    alert(error);
-                    return true;
-                  }
-                  var submitUri = uriTemplate(delUrl)(paramDict);
-                  console.log(form);
-                  var bodyField = $("form.inputForm textarea[name=body]");
-                  var body = bodyField.val();
-                  console.log("body: ", body);
-                  if (httpMethod === "GET"){
-                    window.location.replace(relink(submitUri));
-                    return;
-                  }
-                  superagent[httpMethod.toLowerCase()](submitUri)
-                    .send(body)
-                    .set('Content-Type', contentType)
-                    .end(function(res){
-                      handleResponse(res);
-                    });
-                };
-                bootbox.dialog(form,
-                              [
-                                {
-                                label : "OK",
-                                 callback : function(){
-                                   submit(form);
-                                 }
-                                },
-                                {
-                                 label : "CANCEL",
-                                 callback : function(){
-                                   return null;
-                                 }
-                               }
-                                ],
-                                {
-                                  // prompts need a few extra options
-                                  "header"  : httpMethod + " ",
-                                  // explicitly tell dialog NOT to show the dialog...
-                                  //???  "show"    : false,
-                                  "onEscape": function(){return null}
-                                }
-                                );
-                var bodyField = $("form.inputForm textarea[name=body]");
-                bodyField.keyup(onBodyFieldChange);
-
-                /*, function(shouldDoIt){
-                  if (shouldDoIt){
-                    superagent.put(delUrl).end(function(res){
-                      console.log("response: ", res);
-                      alert('status: ' + res.status + "\nbody: " + res.body);
-                    });
-                  }
-                });*/
-              
-              };
-              return writeLinkHandler;
-            }
-
               $('.putLink').click(getWriteLinkHandler('PUT'));
               $('.getLink').click(getWriteLinkHandler('GET'));
               $('.postLink').click(getWriteLinkHandler('POST'));
@@ -465,15 +550,30 @@
             });
        }
 
+       var setUrlField = function(url){
+         $('#urlField').val(url);
+       };
+
+       var getApiUrl = function(){
+         console.log("getApiUrl: ", window.location.href);
+         var thisUrl = urlgrey();
+         console.log("thisUrl:", thisUrl.toString());
+         var href = '/$$API_PATH$$';
+         if (thisUrl.query().href){
+           href = thisUrl.query().href;
+         }
+         console.log("relative: ", href);
+         url = urlgrey(href).toString();
+         console.log("*****************8 url : ", url);
+         return url;
+       }
+
        $(function(){
          $("#rawFrame").hide();
 
-         var url = window.location.protocol + '//' +
-                   window.location.host +  
-                   (qs('href')[0] || '/$$API_PATH$$');
-         console.log("url : ", url);
+         var url = getApiUrl();
 
-         $('#urlField').val(url);
+         setUrlField(url);
          retrieveUrl(url);
 
          $('#locationForm').submit(function(){
@@ -507,10 +607,48 @@
            $('#rawBtn').parent().addClass('active');
            $('#renderedBtn').parent().removeClass('active');
          });
-
-       
        });
     </script>
+    <script id="inputFormTemplate" type="text/html">
+          {{#method_needs_body}}
+        <ul class="nav nav-tabs">
+          <li><a href="#json-form" data-toggle="tab" id="json-form-tab">Form</a></li>
+          <li class="active"><a href="#input-rawjson" data-toggle="tab">Raw Json</a></li>
+        </ul>
+          {{/method_needs_body}}
+        <div class="tab-content">
+          <div class="tab-pane active" id="input-rawjson">
+         <form class="inputForm">
+          {{#has_url_params}}
+           <fieldset>
+           <legend>URL Parameters</legend>
+           {{#url_params}}
+             <label>
+             {{name}}: <input type="text" name="URI_PARAM_{{name}}" value="" />
+             </label>
+           {{/url_params}}
+           </fieldset>
+          {{/has_url_params}}
+         <fieldset>
+          {{#method_needs_body}}
+           <div class="row">
+           <div class="span3">
+           <legend>Body</legend>
+           <textarea style="width: 300px; height: 150px;" name="body"></textarea>
+           </div>
+           <div class="span1" id="jsonimg">
+           <img src="img/badjson.png">
+           </div>
+           </div>
+         {{/method_needs_body}}
+         </form>
+        </div>
+          <div class="tab-pane" id="json-form">
+            <div id="input-json-form"></div>
+            <input type="button" id="inputFormSubmit" value="submit" />
+          </div>
+        </div>
+  </script>
   </head>
 
   <body>
