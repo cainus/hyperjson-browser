@@ -26,11 +26,11 @@ function getIndex(mount_path, api_path, title, cb){
 
 module.exports = function(options){
   options = options || {};
-  api_path = options.api_path || '/api';
-  browser_path = options.browser_path || api_path + '/browser';
-  title = options.title || 'hyper+json browser';
-  logger = logDriver( { level : (options.logLevel || false) });
-  mount_path = browser_path.replace(/^\//, '');
+  var api_path = options.api_path || '/api';
+  var browser_path = options.browser_path || api_path + '/browser';
+  var title = options.title || 'hyper+json browser';
+  var logger = logDriver( { level : (options.logLevel || false) });
+  var mount_path = browser_path.replace(/^\//, '');
   api_path = api_path.replace(/^\//, '');
   return function(req, res, next){
     var pathname = url.parse(req.url).pathname;

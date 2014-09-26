@@ -9,7 +9,7 @@
     "hypermedia",
     "hyperjson"
   ],
-  "version": "0.2.0",
+  "version": "0.2.1",
   "bugs": {
     "url": "https://github.com/cainus/hyperjson-browser/issues"
   },
@@ -26,7 +26,7 @@
   "dependencies": {
     "underscore": "1.3.3",
     "filed": "0.0.7",
-    "log-driver": "1.2.1"
+    "log-driver": "1.2.5"
   },
   "devDependencies": {
     "mocha": "1.8.1",
